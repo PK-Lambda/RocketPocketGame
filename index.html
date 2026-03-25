@@ -1,0 +1,1407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>RocketPocket</title>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Rajdhani:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+    html,body{width:100%;height:100%;background:#4a4a4a;display:flex;align-items:center;justify-content:center;min-height:100vh;}
+    #game-container{width:640px;height:480px;position:relative;overflow:hidden;box-shadow:0 0 0 2px #222,0 12px 60px rgba(0,0,0,0.9);}
+    #game-canvas{display:block;position:absolute;top:0;left:0;}
+
+    /* ── Screens ── */
+    .screen{position:absolute;top:0;left:0;width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:opacity 0.4s ease;}
+    .screen.hidden{opacity:0;pointer-events:none;}
+
+    /* ── Shared button ── */
+    .menu-btn{font-family:'Orbitron',sans-serif;font-weight:700;font-size:12px;letter-spacing:2.5px;text-transform:uppercase;color:#d4c7f7;background:rgba(0,0,0,0.35);border:1px solid rgba(167,139,250,0.3);width:230px;padding:14px 0;margin:5px 0;cursor:pointer;position:relative;transition:color .25s,border-color .25s,box-shadow .25s;overflow:hidden;text-decoration:none;display:inline-block;text-align:center;}
+    .menu-btn::before{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(124,58,237,0.2),transparent);transform:translateX(-120%);transition:transform 0.4s ease;}
+    .menu-btn:hover::before{transform:translateX(120%);}
+    .menu-btn:hover{color:#fff;border-color:rgba(167,139,250,0.85);box-shadow:0 0 20px rgba(124,58,237,0.55),inset 0 0 15px rgba(124,58,237,0.1);}
+    .menu-btn:active{transform:scale(0.97);}
+    .btn-icon{margin-right:7px;font-size:13px;}
+
+    /* ── MAIN MENU ── */
+    #title{font-family:'Orbitron',sans-serif;font-weight:900;font-size:50px;letter-spacing:3px;color:#fff;text-shadow:0 0 7px rgba(255,255,255,0.7),0 0 21px rgba(224,224,224,0.7),0 0 45px rgba(170,170,170,0.7),0 0 77px rgba(102,102,102,0.7);animation:titlePulse 3s ease-in-out infinite;margin-bottom:8px;line-height:1;}
+    #subtitle{font-family:'Rajdhani',sans-serif;font-weight:300;font-size:12px;letter-spacing:7px;color:#a78bfa;text-transform:uppercase;opacity:0.7;margin-bottom:42px;}
+    @keyframes titlePulse{0%,100%{text-shadow:0 0 7px rgba(255,255,255,0.7),0 0 21px rgba(224,224,224,0.7),0 0 45px rgba(170,170,170,0.7),0 0 77px rgba(102,102,102,0.7);}50%{text-shadow:0 0 14px rgba(255,255,255,0.7),0 0 35px rgba(255,255,255,0.7),0 0 66px rgba(204,204,204,0.7),0 0 105px rgba(153,153,153,0.7);}}
+    .divider{width:220px;height:1px;background:linear-gradient(90deg,transparent,#7c3aed,transparent);margin-bottom:30px;opacity:0.55;}
+
+    /* ── ABOUT ── */
+    #about{padding:0 36px;justify-content:center;gap:0;}
+    .about-header{font-family:'Orbitron',sans-serif;font-weight:700;font-size:18px;letter-spacing:4px;color:#c4b5fd;text-transform:uppercase;text-align:center;margin-bottom:28px;text-shadow:0 0 18px rgba(167,139,250,0.6);}
+    .about-body{display:flex;align-items:center;gap:30px;margin-bottom:30px;width:100%;}
+    .astronaut-wrap{flex:0 0 176px;display:flex;align-items:center;justify-content:center;animation:floatAstro 4s ease-in-out infinite;filter:drop-shadow(0 0 14px rgba(167,139,250,0.45));}
+    @keyframes floatAstro{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+    #wave-arm{transform-origin:25px 96px;transform:rotate(0deg);transition:transform 0.5s ease-out;}
+    .astronaut-wrap:hover #wave-arm{transform:rotate(100deg);animation:waveRock 0.7s ease-in-out 0.5s infinite;}
+    @keyframes waveRock{0%{transform:rotate(100deg);}50%{transform:rotate(85deg);}100%{transform:rotate(100deg);}}
+    #rocket-counter{transform-origin:16.5px 150px;transform:rotate(0deg);transition:transform 0.5s ease-out;}
+    .astronaut-wrap:hover #rocket-counter{transform:rotate(-100deg);animation:rocketCounter 0.7s ease-in-out 0.5s infinite;}
+    @keyframes rocketCounter{0%{transform:rotate(-100deg);}50%{transform:rotate(-85deg);}100%{transform:rotate(-100deg);}}
+    .about-text-block{flex:1;}
+    .about-text-block p{font-family:'Rajdhani',sans-serif;font-weight:400;font-size:15px;line-height:1.75;color:#ccc4e8;margin-bottom:10px;}
+    .about-text-block .handle{font-family:'Orbitron',sans-serif;font-size:13px;color:#a78bfa;letter-spacing:1px;}
+    .about-divider{width:100%;height:1px;background:linear-gradient(90deg,transparent,#7c3aed,transparent);margin-bottom:22px;opacity:0.45;}
+    .about-buttons{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;}
+    .about-buttons .menu-btn{width:160px;font-size:11px;padding:12px 0;}
+
+    /* ── ROCKET SELECTION ── */
+    #rockets{padding:14px 30px 10px;justify-content:center;gap:0;}
+    .rocket-screen-title{font-family:'Orbitron',sans-serif;font-weight:700;font-size:14px;letter-spacing:5px;color:#c4b5fd;text-transform:uppercase;text-align:center;text-shadow:0 0 18px rgba(167,139,250,0.6);margin-bottom:2px;}
+    .rocket-screen-sub{font-family:'Rajdhani',sans-serif;font-size:11px;letter-spacing:3px;color:#6d4fa0;text-transform:uppercase;margin-bottom:10px;}
+    .rocket-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:8px;width:100%;max-width:480px;}
+    .rocket-card{background:rgba(10,6,28,0.7);border:1px solid rgba(109,40,217,0.35);border-radius:8px;padding:10px 10px 8px;display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;position:relative;transition:border-color 0.25s,box-shadow 0.25s,transform 0.2s;}
+    .rocket-card:hover{border-color:rgba(167,139,250,0.7);box-shadow:0 0 18px rgba(124,58,237,0.4);transform:translateY(-2px);}
+    .rocket-card.selected{border-color:#a78bfa;box-shadow:0 0 0 2px #7c3aed,0 0 28px rgba(124,58,237,0.65);}
+    .rocket-card.selected::after{content:'✓';position:absolute;top:5px;right:8px;font-size:11px;color:#a78bfa;font-family:'Orbitron',sans-serif;}
+    .rocket-svg-wrap{width:52px;height:72px;display:flex;align-items:center;justify-content:center;}
+    .rocket-card:hover .rocket-svg-wrap svg,.rocket-card.selected .rocket-svg-wrap svg{filter:drop-shadow(0 0 10px var(--glow));}
+    .rocket-name{font-family:'Orbitron',sans-serif;font-weight:700;font-size:9px;letter-spacing:2px;color:#c4b5fd;text-transform:uppercase;}
+    .rocket-screen-footer{display:flex;gap:12px;align-items:center;justify-content:center;}
+    .rocket-screen-footer .menu-btn{width:150px;font-size:10px;padding:10px 0;margin:0;}
+    #selected-label{font-family:'Rajdhani',sans-serif;font-size:12px;color:#6d4fa0;letter-spacing:2px;text-align:center;height:16px;margin-bottom:8px;transition:color 0.3s;}
+    #selected-label.active{color:#a78bfa;}
+
+    /* ── GAMEPLAY SCREEN ── */
+    #gameplay{justify-content:flex-start;align-items:stretch;padding:0;cursor:none;pointer-events:none;}
+    #wave-banner{pointer-events:none;}
+    #game-overlay{pointer-events:none;}
+    #game-overlay.show{pointer-events:all;}
+    #cockpit{pointer-events:all;}
+
+    /* Cockpit HUD strip at bottom */
+    #cockpit{
+      position:absolute;bottom:0;left:0;right:0;
+      height:64px;
+      background:linear-gradient(180deg,rgba(5,3,20,0.92) 0%,rgba(10,6,35,0.98) 100%);
+      border-top:1px solid rgba(124,58,237,0.5);
+      display:flex;align-items:center;
+      padding:0 12px;
+      gap:10px;
+      z-index:20;
+    }
+    .cockpit-section{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;}
+    .cockpit-label{font-family:'Rajdhani',sans-serif;font-size:9px;letter-spacing:2px;color:rgba(167,139,250,0.6);text-transform:uppercase;}
+    .cockpit-value{font-family:'Orbitron',sans-serif;font-weight:700;font-size:14px;color:#e0d8ff;letter-spacing:1px;}
+    .cockpit-divider{width:1px;height:36px;background:rgba(124,58,237,0.35);}
+    .cockpit-spacer{flex:1;}
+
+    /* Health pips */
+    #health-pips{display:flex;gap:5px;align-items:center;}
+    .pip{width:10px;height:22px;border-radius:3px;border:1px solid rgba(167,139,250,0.4);background:rgba(124,58,237,0.15);transition:background 0.2s;}
+    .pip.alive{background:#7c3aed;box-shadow:0 0 6px rgba(124,58,237,0.8);}
+    .pip.hit{background:rgba(239,68,68,0.6);border-color:rgba(239,68,68,0.5);box-shadow:0 0 6px rgba(239,68,68,0.5);}
+
+    /* Barrage cooldown arc */
+    #barrage-wrap{position:relative;width:36px;height:36px;flex-shrink:0;}
+    #barrage-canvas{display:block;}
+    .barrage-label-inner{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'Orbitron',sans-serif;font-size:7px;color:rgba(167,139,250,0.8);letter-spacing:0px;pointer-events:none;}
+
+    /* Cockpit buttons */
+    .cockpit-btn{font-family:'Orbitron',sans-serif;font-weight:700;font-size:8px;letter-spacing:1.5px;text-transform:uppercase;color:#a78bfa;background:rgba(0,0,0,0.5);border:1px solid rgba(124,58,237,0.4);padding:5px 8px;cursor:pointer;border-radius:3px;transition:all 0.2s;white-space:nowrap;}
+    .cockpit-btn:hover{color:#fff;border-color:#a78bfa;box-shadow:0 0 8px rgba(124,58,237,0.5);}
+
+    /* Wave banner */
+    #wave-banner{
+      position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+      font-family:'Orbitron',sans-serif;font-weight:900;
+      font-size:28px;letter-spacing:4px;color:#fff;
+      text-shadow:0 0 20px rgba(167,139,250,0.9);
+      pointer-events:none;opacity:0;transition:opacity 0.4s;
+      text-align:center;line-height:1.4;
+      z-index:25;
+    }
+
+    /* Game Over / Win overlay */
+    #game-overlay{
+      position:absolute;inset:0;
+      background:rgba(3,2,11,0.85);
+      display:flex;flex-direction:column;align-items:center;justify-content:center;
+      gap:12px;z-index:30;
+      opacity:0;pointer-events:none;transition:opacity 0.5s;
+    }
+    #game-overlay.show{opacity:1;pointer-events:all;}
+    .overlay-title{font-family:'Orbitron',sans-serif;font-weight:900;font-size:32px;letter-spacing:3px;color:#fff;text-shadow:0 0 20px rgba(167,139,250,0.9);}
+    .overlay-sub{font-family:'Rajdhani',sans-serif;font-size:16px;letter-spacing:3px;color:#a78bfa;}
+    .overlay-score{font-family:'Orbitron',sans-serif;font-size:14px;color:#c4b5fd;letter-spacing:2px;}
+
+    /* ── SHOP OVERLAY ── */
+    #shop-overlay{
+      position:absolute;inset:0;
+      background:rgba(3,2,18,0.93);
+      display:flex;flex-direction:column;align-items:center;justify-content:center;
+      gap:10px;z-index:28;
+      opacity:0;pointer-events:none;
+      transition:opacity 0.4s;
+      cursor:default;
+    }
+    #shop-overlay.show{opacity:1;pointer-events:all;}
+    .shop-title{
+      font-family:'Orbitron',sans-serif;font-weight:900;
+      font-size:20px;letter-spacing:6px;color:#c4b5fd;
+      text-shadow:0 0 18px rgba(167,139,250,0.7);
+      margin-bottom:2px;
+    }
+    .shop-wave-label{font-family:'Rajdhani',sans-serif;font-size:14px;letter-spacing:3px;color:#a78bfa;}
+    .shop-score-label{font-family:'Orbitron',sans-serif;font-size:13px;letter-spacing:2px;color:#e0d8ff;margin-bottom:6px;}
+    .shop-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:10px;width:100%;max-width:560px;}
+    .shop-card{
+      background:rgba(10,6,28,0.85);
+      border:1px solid rgba(124,58,237,0.4);
+      border-radius:8px;padding:10px 10px 8px;
+      display:flex;flex-direction:column;align-items:center;gap:4px;
+      width:100%;
+      cursor:pointer;
+      transition:border-color 0.2s,box-shadow 0.2s;
+    }
+    .shop-card:hover{border-color:rgba(167,139,250,0.8);box-shadow:0 0 16px rgba(124,58,237,0.4);}
+    .shop-card.owned{border-color:rgba(74,222,128,0.5);box-shadow:0 0 10px rgba(74,222,128,0.2);}
+    .shop-card.owned .shop-card-name{color:#4ade80;}
+    .shop-card.owned .shop-btn{background:rgba(74,222,128,0.15);border-color:rgba(74,222,128,0.4);color:#4ade80;cursor:default;}
+    .shop-card-icon{font-size:20px;}
+    .shop-card-name{font-family:'Orbitron',sans-serif;font-weight:700;font-size:9px;letter-spacing:2px;color:#c4b5fd;text-transform:uppercase;text-align:center;}
+    .shop-card-desc{font-family:'Rajdhani',sans-serif;font-size:12px;color:#9d8ec4;text-align:center;min-height:16px;}
+    .shop-card-cost{font-family:'Orbitron',sans-serif;font-size:10px;letter-spacing:1px;color:#f59e0b;margin-top:2px;}
+    .shop-btn{
+      font-family:'Orbitron',sans-serif;font-weight:700;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;
+      color:#d4c7f7;background:rgba(124,58,237,0.2);
+      border:1px solid rgba(124,58,237,0.5);
+      padding:6px 14px;cursor:pointer;border-radius:3px;
+      transition:all 0.2s;margin-top:4px;width:100%;
+    }
+    .shop-btn:hover{background:rgba(124,58,237,0.5);color:#fff;box-shadow:0 0 10px rgba(124,58,237,0.5);}
+    .shop-btn:disabled{opacity:0.35;cursor:not-allowed;}
+    .shop-btn:disabled:hover{background:rgba(124,58,237,0.2);box-shadow:none;color:#d4c7f7;}
+    .shop-continue-btn{
+      font-family:'Orbitron',sans-serif;font-weight:700;font-size:11px;letter-spacing:3px;text-transform:uppercase;
+      color:#fff;background:rgba(124,58,237,0.3);
+      border:1px solid rgba(167,139,250,0.6);
+      padding:10px 30px;cursor:pointer;border-radius:3px;
+      transition:all 0.2s;
+    }
+    .shop-continue-btn:hover{background:rgba(124,58,237,0.6);box-shadow:0 0 14px rgba(124,58,237,0.5);}
+
+    /* ── PAUSE OVERLAY ── */
+    #pause-overlay{
+      position:absolute;inset:0;
+      background:rgba(3,2,18,0.88);
+      display:flex;flex-direction:column;align-items:center;justify-content:center;
+      gap:12px;z-index:29;
+      opacity:0;pointer-events:none;
+      transition:opacity 0.3s;
+      cursor:default;
+    }
+    #pause-overlay.show{opacity:1;pointer-events:all;}
+    .pause-status{
+      font-family:'Orbitron',sans-serif;font-weight:900;
+      font-size:22px;letter-spacing:6px;color:#fff;
+      text-shadow:0 0 16px rgba(255,255,255,0.5);
+    }
+    .pause-divider{
+      width:300px;height:1px;
+      background:linear-gradient(90deg,transparent,rgba(124,58,237,0.7),transparent);
+    }
+    .pause-quote-attr{
+      font-family:'Orbitron',sans-serif;font-size:10px;
+      letter-spacing:3px;color:#ef4444;
+      text-shadow:0 0 10px rgba(239,68,68,0.6);
+      text-transform:uppercase;
+    }
+    .pause-quote{
+      font-family:'Rajdhani',sans-serif;font-weight:400;
+      font-size:17px;line-height:1.6;
+      color:#e0d8ff;text-align:center;
+      max-width:340px;
+      font-style:italic;
+    }
+    .pause-buttons{display:flex;flex-direction:column;gap:8px;align-items:center;margin-top:6px;}
+
+    /* Version & social icons */
+    #version-label{position:absolute;bottom:12px;left:14px;font-family:'Rajdhani',sans-serif;font-size:11px;letter-spacing:1.5px;color:rgba(255,255,255,0.55);z-index:10;text-transform:uppercase;}
+    #social-icons{position:absolute;bottom:12px;right:14px;display:flex;gap:10px;align-items:center;z-index:10;}
+    #social-icons a{display:flex;align-items:center;justify-content:center;width:28px;height:28px;border:1px solid rgba(255,255,255,0.2);border-radius:4px;background:rgba(0,0,0,0.4);opacity:0.55;transition:opacity 0.2s,border-color 0.2s,box-shadow 0.2s;text-decoration:none;}
+    #social-icons a:hover{opacity:1;border-color:rgba(255,255,255,0.6);box-shadow:0 0 10px rgba(255,255,255,0.2);}
+    #social-icons svg{display:block;}
+  </style>
+</head>
+<body>
+<div id="game-container">
+  <canvas id="game-canvas" width="640" height="480"></canvas>
+
+  <!-- ══ MAIN MENU ══════════════════════════════════════════════════════════ -->
+  <div id="menu" class="screen">
+    <div id="title">RocketPocket</div>
+    <div id="subtitle">pocket &nbsp;·&nbsp; sized &nbsp;·&nbsp; adventure</div>
+    <div class="divider"></div>
+    <button class="menu-btn" id="btn-start">Start</button>
+    <button class="menu-btn" id="btn-about">About Us</button>
+  </div>
+
+  <!-- ══ ROCKET SELECTION ═══════════════════════════════════════════════════ -->
+  <div id="rockets" class="screen hidden">
+    <div class="rocket-screen-title">Choose Your Rocket</div>
+    <div class="rocket-screen-sub">Pick your vessel</div>
+    <div class="rocket-grid" id="rocket-grid">
+      <div class="rocket-card" data-id="0" style="--glow:#a78bfa">
+        <div class="rocket-svg-wrap">
+          <svg viewBox="0 0 60 100" width="52" height="72" xmlns="http://www.w3.org/2000/svg">
+            <polygon points="30,4 48,40 48,80 12,80 12,40" fill="#2a1f4e" stroke="#7c3aed" stroke-width="1.5"/>
+            <polygon points="30,4 20,40 40,40" fill="#7c3aed"/>
+            <circle cx="30" cy="52" r="8" fill="#0d0820" stroke="#a78bfa" stroke-width="1.2"/>
+            <circle cx="27" cy="49" r="3" fill="rgba(167,139,250,0.2)"/>
+            <polygon points="12,80 2,96 16,86" fill="#4c1d95" stroke="#7c3aed" stroke-width="1"/>
+            <polygon points="48,80 58,96 44,86" fill="#4c1d95" stroke="#7c3aed" stroke-width="1"/>
+            <ellipse cx="30" cy="81" rx="10" ry="5" fill="#f59e0b" opacity="0.6"/>
+            <ellipse cx="30" cy="84" rx="6" ry="4" fill="#fbbf24" opacity="0.4"/>
+            <line x1="12" y1="64" x2="48" y2="64" stroke="#a78bfa" stroke-width="1" opacity="0.5"/>
+          </svg>
+        </div>
+        <div class="rocket-name">The Viper</div>
+      </div>
+      <div class="rocket-card" data-id="1" style="--glow:#22d3ee">
+        <div class="rocket-svg-wrap">
+          <svg viewBox="0 0 60 100" width="52" height="72" xmlns="http://www.w3.org/2000/svg">
+            <polygon points="30,2 42,36 42,82 18,82 18,36" fill="#0f2a33" stroke="#0e7490" stroke-width="1.5"/>
+            <polygon points="30,2 18,36 42,36" fill="#0891b2"/>
+            <rect x="24" y="47" width="12" height="12" rx="2" transform="rotate(45,30,53)" fill="#0d0820" stroke="#22d3ee" stroke-width="1.2"/>
+            <circle cx="28" cy="51" r="2.5" fill="rgba(34,211,238,0.2)"/>
+            <polygon points="18,76 4,98 20,84" fill="#0e7490" stroke="#22d3ee" stroke-width="1"/>
+            <polygon points="42,76 56,98 40,84" fill="#0e7490" stroke="#22d3ee" stroke-width="1"/>
+            <line x1="18" y1="56" x2="42" y2="56" stroke="#22d3ee" stroke-width="0.8" opacity="0.6"/>
+            <line x1="18" y1="68" x2="42" y2="68" stroke="#22d3ee" stroke-width="0.8" opacity="0.4"/>
+            <ellipse cx="30" cy="83" rx="9" ry="4" fill="#06b6d4" opacity="0.55"/>
+            <ellipse cx="30" cy="86" rx="5" ry="3" fill="#67e8f9" opacity="0.3"/>
+          </svg>
+        </div>
+        <div class="rocket-name">Nova Dart</div>
+      </div>
+      <div class="rocket-card" data-id="2" style="--glow:#f97316">
+        <div class="rocket-svg-wrap">
+          <svg viewBox="0 0 60 100" width="52" height="72" xmlns="http://www.w3.org/2000/svg">
+            <rect x="10" y="36" width="40" height="46" rx="4" fill="#2d1000" stroke="#c2410c" stroke-width="1.5"/>
+            <ellipse cx="30" cy="36" rx="20" ry="22" fill="#7c2d12" stroke="#ea580c" stroke-width="1.5"/>
+            <polygon points="30,4 18,30 42,30" fill="#ea580c"/>
+            <ellipse cx="30" cy="46" rx="9" ry="7" fill="#0d0820" stroke="#f97316" stroke-width="1.2"/>
+            <ellipse cx="27" cy="44" rx="3" ry="2.5" fill="rgba(249,115,22,0.2)"/>
+            <polygon points="10,64 0,96 14,78" fill="#7c2d12" stroke="#ea580c" stroke-width="1"/>
+            <polygon points="50,64 60,96 46,78" fill="#7c2d12" stroke="#ea580c" stroke-width="1"/>
+            <line x1="10" y1="58" x2="50" y2="58" stroke="#ea580c" stroke-width="1" opacity="0.5"/>
+            <line x1="10" y1="70" x2="50" y2="70" stroke="#ea580c" stroke-width="1" opacity="0.4"/>
+            <ellipse cx="30" cy="83" rx="12" ry="5" fill="#f97316" opacity="0.65"/>
+            <ellipse cx="30" cy="87" rx="7" ry="4" fill="#fbbf24" opacity="0.4"/>
+          </svg>
+        </div>
+        <div class="rocket-name">Iron Fang</div>
+      </div>
+      <div class="rocket-card" data-id="3" style="--glow:#e2e8f0">
+        <div class="rocket-svg-wrap">
+          <svg viewBox="0 0 60 100" width="52" height="72" xmlns="http://www.w3.org/2000/svg">
+            <polygon points="30,6 38,38 38,82 22,82 22,38" fill="#1e2535" stroke="#94a3b8" stroke-width="1.5"/>
+            <polygon points="30,6 22,38 38,38" fill="#cbd5e1"/>
+            <rect x="24" y="50" width="12" height="5" rx="2" fill="#0d0820" stroke="#e2e8f0" stroke-width="1"/>
+            <rect x="25.5" y="51" width="4" height="3" rx="1" fill="rgba(226,232,240,0.2)"/>
+            <polygon points="22,74 6,96 22,84" fill="#334155" stroke="#94a3b8" stroke-width="1"/>
+            <polygon points="38,74 54,96 38,84" fill="#334155" stroke="#94a3b8" stroke-width="1"/>
+            <line x1="22" y1="60" x2="38" y2="60" stroke="#cbd5e1" stroke-width="0.7" opacity="0.5"/>
+            <line x1="22" y1="70" x2="38" y2="70" stroke="#cbd5e1" stroke-width="0.7" opacity="0.35"/>
+            <ellipse cx="30" cy="83" rx="8" ry="4" fill="#bae6fd" opacity="0.45"/>
+            <ellipse cx="30" cy="86" rx="4" ry="3" fill="#fff" opacity="0.2"/>
+          </svg>
+        </div>
+        <div class="rocket-name">Ghost Wing</div>
+      </div>
+    </div>
+    <div id="selected-label">No rocket selected</div>
+    <div class="rocket-screen-footer">
+      <button class="menu-btn" id="btn-rockets-back"><span class="btn-icon">←</span> Back</button>
+      <button class="menu-btn" id="btn-confirm-rocket" disabled style="opacity:0.4">Confirm</button>
+    </div>
+  </div>
+
+  <!-- ══ ABOUT ═════════════════════════════════════════════════════════════ -->
+  <div id="about" class="screen hidden">
+    <div class="about-header">About</div>
+    <div class="about-body">
+      <div class="astronaut-wrap">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="-45 0 220 200" width="176" height="200">
+          <ellipse cx="70" cy="62" rx="36" ry="38" fill="#e8e8f0" stroke="#b0b0c0" stroke-width="2.5"/>
+          <ellipse cx="70" cy="63" rx="24" ry="26" fill="#0d0820" stroke="#a78bfa" stroke-width="1.5" opacity="0.9"/>
+          <ellipse cx="62" cy="54" rx="7" ry="10" fill="rgba(255,255,255,0.12)" transform="rotate(-15,62,54)"/>
+          <ellipse cx="80" cy="52" rx="3" ry="4" fill="rgba(255,255,255,0.08)" transform="rotate(-15,80,52)"/>
+          <circle cx="60" cy="58" r="1" fill="#a78bfa" opacity="0.7"/>
+          <circle cx="75" cy="65" r="0.8" fill="#c4b5fd" opacity="0.6"/>
+          <circle cx="68" cy="72" r="0.6" fill="#a78bfa" opacity="0.5"/>
+          <rect x="34" y="94" width="72" height="72" rx="16" fill="#dcdce8" stroke="#b0b0c0" stroke-width="2"/>
+          <rect x="50" y="108" width="40" height="26" rx="5" fill="#0d0820" stroke="#7c3aed" stroke-width="1.2"/>
+          <circle cx="58" cy="118" r="3.5" fill="#a78bfa" opacity="0.9"/>
+          <circle cx="70" cy="118" r="3.5" fill="#7c3aed" opacity="0.8"/>
+          <circle cx="82" cy="118" r="3.5" fill="#4c1d95" opacity="0.7"/>
+          <line x1="52" y1="126" x2="88" y2="126" stroke="#7c3aed" stroke-width="0.8" opacity="0.6"/>
+          <rect x="54" y="90" width="32" height="10" rx="5" fill="#e8e8f0" stroke="#b0b0c0" stroke-width="1.5"/>
+          <g id="wave-arm">
+            <rect x="14" y="96" width="22" height="52" rx="11" fill="#dcdce8" stroke="#b0b0c0" stroke-width="2"/>
+            <ellipse cx="25" cy="153" rx="12" ry="8" fill="#e8e8f0" stroke="#b0b0c0" stroke-width="1.5"/>
+            <g id="rocket-counter">
+              <rect x="13" y="132" width="7" height="18" rx="3" fill="#7c3aed"/>
+              <polygon points="16.5,126 13,132 20,132" fill="#a78bfa"/>
+              <line x1="16.5" y1="150" x2="14" y2="156" stroke="#f59e0b" stroke-width="1.5"/>
+              <line x1="16.5" y1="150" x2="19" y2="156" stroke="#f59e0b" stroke-width="1.5"/>
+            </g>
+          </g>
+          <rect x="104" y="96" width="22" height="52" rx="11" fill="#dcdce8" stroke="#b0b0c0" stroke-width="2"/>
+          <ellipse cx="115" cy="153" rx="12" ry="8" fill="#e8e8f0" stroke="#b0b0c0" stroke-width="1.5"/>
+          <rect x="42" y="160" width="24" height="34" rx="10" fill="#dcdce8" stroke="#b0b0c0" stroke-width="2"/>
+          <rect x="74" y="160" width="24" height="34" rx="10" fill="#dcdce8" stroke="#b0b0c0" stroke-width="2"/>
+          <ellipse cx="54" cy="193" rx="14" ry="7" fill="#c8c8d8" stroke="#b0b0c0" stroke-width="1.5"/>
+          <ellipse cx="86" cy="193" rx="14" ry="7" fill="#c8c8d8" stroke="#b0b0c0" stroke-width="1.5"/>
+          <rect x="104" y="98" width="14" height="30" rx="5" fill="#e0e0ec" stroke="#b0b0c0" stroke-width="1.5"/>
+          <rect x="106" y="103" width="10" height="6" rx="2" fill="#7c3aed" opacity="0.7"/>
+          <circle cx="37" cy="103" r="5" fill="#7c3aed" opacity="0.8"/>
+          <circle cx="103" cy="103" r="5" fill="#7c3aed" opacity="0.8"/>
+          <line x1="70" y1="24" x2="70" y2="10" stroke="#b0b0c0" stroke-width="1.5"/>
+          <circle cx="70" cy="8" r="3" fill="#e8e8f0"/>
+        </svg>
+      </div>
+      <div class="about-text-block">
+        <p>Thank you for playing my game. I'm <span class="handle">petequibit</span> and I hope you enjoyed it.</p>
+        <p>This is a vibe-coding project where I set out to explore just how far current AI technology could take me.</p>
+        <p>Built with curiosity, caffeine, and a healthy dose of space enthusiasm. 🚀</p>
+      </div>
+    </div>
+    <div class="about-divider"></div>
+    <div class="about-buttons">
+      <button class="menu-btn" id="btn-back"><span class="btn-icon">←</span> Main Menu</button>
+      <a class="menu-btn" href="https://github.com/PK-Lambda" target="_blank" rel="noopener"><span class="btn-icon">⌥</span> GitHub</a>
+      <a class="menu-btn" href="https://www.linkedin.com/in/peter-sobko-mba-2aa00b159/" target="_blank" rel="noopener"><span class="btn-icon">in</span> LinkedIn</a>
+    </div>
+  </div>
+
+  <!-- ══ GAMEPLAY ═══════════════════════════════════════════════════════════ -->
+  <div id="gameplay" class="screen hidden">
+    <!-- Wave announcement banner -->
+    <div id="wave-banner"></div>
+
+    <!-- Cockpit HUD -->
+    <div id="cockpit">
+      <!-- Health -->
+      <div class="cockpit-section">
+        <div class="cockpit-label">Hull</div>
+        <div id="health-pips">
+          <div class="pip alive" id="pip-0"></div>
+          <div class="pip alive" id="pip-1"></div>
+          <div class="pip alive" id="pip-2"></div>
+          <div class="pip alive" id="pip-3"></div>
+          <div class="pip alive" id="pip-4"></div>
+        </div>
+      </div>
+
+      <div class="cockpit-divider"></div>
+
+      <!-- Wave -->
+      <div class="cockpit-section">
+        <div class="cockpit-label">Wave</div>
+        <div class="cockpit-value" id="hud-wave">1</div>
+      </div>
+
+      <div class="cockpit-divider"></div>
+
+      <!-- Score -->
+      <div class="cockpit-section">
+        <div class="cockpit-label">Score</div>
+        <div class="cockpit-value" id="hud-score">0</div>
+      </div>
+
+      <div class="cockpit-divider"></div>
+
+      <!-- High Score -->
+      <div class="cockpit-section">
+        <div class="cockpit-label">Best</div>
+        <div class="cockpit-value" id="hud-best">0</div>
+      </div>
+
+      <div class="cockpit-divider"></div>
+
+      <!-- Barrage cooldown -->
+      <div class="cockpit-section">
+        <div class="cockpit-label">Barrage</div>
+        <div id="barrage-wrap">
+          <canvas id="barrage-canvas" width="36" height="36"></canvas>
+          <div class="barrage-label-inner" id="barrage-label">RDY</div>
+        </div>
+      </div>
+
+      <div class="cockpit-spacer"></div>
+
+      <!-- Cockpit buttons -->
+      <button class="cockpit-btn" id="btn-pause">⏸ Pause</button>
+      <button class="cockpit-btn" id="btn-to-menu">⌂ Menu</button>
+    </div>
+
+    <!-- Game over overlay -->
+    <div id="game-overlay">
+      <div class="overlay-title" id="overlay-title">GAME OVER</div>
+      <div class="overlay-sub" id="overlay-sub">Wave reached</div>
+      <div class="overlay-score" id="overlay-score">Score: 0</div>
+      <button class="menu-btn" id="btn-restart" style="width:180px;font-size:11px;padding:12px 0;margin-top:8px;">Play Again</button>
+      <button class="menu-btn" id="btn-overlay-menu" style="width:180px;font-size:11px;padding:12px 0;">Main Menu</button>
+    </div>
+
+    <!-- Shop overlay — appears between waves -->
+    <div id="shop-overlay">
+      <div class="shop-title">⚙ ARMORY</div>
+      <div class="shop-wave-label" id="shop-wave-label">Wave 1 cleared!</div>
+      <div class="shop-score-label" id="shop-score-label">Credits: 0</div>
+      <div class="shop-grid">
+
+        <!-- Hull Repair -->
+        <div class="shop-card" id="shop-card-health">
+          <div class="shop-card-icon">❤️</div>
+          <div class="shop-card-name">Hull Repair</div>
+          <div class="shop-card-desc">Fully restore all health</div>
+          <div class="shop-card-cost">1,000 pts</div>
+          <button class="shop-btn" id="btn-buy-health">Buy</button>
+        </div>
+
+        <!-- Bullet Speed -->
+        <div class="shop-card" id="shop-card-speed">
+          <div class="shop-card-icon">⚡</div>
+          <div class="shop-card-name">Speed Boost</div>
+          <div class="shop-card-desc" id="shop-speed-desc">+10% bullet speed</div>
+          <div class="shop-card-cost">1,000 pts</div>
+          <button class="shop-btn" id="btn-buy-speed">Buy</button>
+        </div>
+
+        <!-- Machine Gun -->
+        <div class="shop-card" id="shop-card-machinegun">
+          <div class="shop-card-icon">🔫</div>
+          <div class="shop-card-name">Machine Gun</div>
+          <div class="shop-card-desc">Hold to auto-fire</div>
+          <div class="shop-card-cost">1,500 pts</div>
+          <button class="shop-btn" id="btn-buy-machinegun">Buy</button>
+        </div>
+
+        <!-- Shotgun -->
+        <div class="shop-card" id="shop-card-shotgun">
+          <div class="shop-card-icon">💥</div>
+          <div class="shop-card-name">Shotgun</div>
+          <div class="shop-card-desc">3-bullet spread shot</div>
+          <div class="shop-card-cost">5,000 pts</div>
+          <button class="shop-btn" id="btn-buy-shotgun">Buy</button>
+        </div>
+
+        <!-- Barrage Unlock -->
+        <div class="shop-card" id="shop-card-barrage">
+          <div class="shop-card-icon">🌀</div>
+          <div class="shop-card-name">Barrage</div>
+          <div class="shop-card-desc">Unlock right-click barrage</div>
+          <div class="shop-card-cost">5,000 pts</div>
+          <button class="shop-btn" id="btn-buy-barrage">Buy</button>
+        </div>
+
+      </div>
+      <button class="shop-continue-btn" id="btn-shop-continue">Continue →</button>
+    </div>
+
+    <!-- Pause overlay -->
+    <div id="pause-overlay">
+      <div class="pause-status">⏸ GAME PAUSED</div>
+      <div class="pause-divider"></div>
+      <div class="pause-quote-attr">— Darth Vader</div>
+      <div class="pause-quote">"Great leaders don't push people down — they lift them up."</div>
+      <div class="pause-buttons">
+        <button class="menu-btn" id="btn-resume" style="width:190px;font-size:11px;padding:12px 0;">▶ Resume</button>
+        <button class="menu-btn" id="btn-pause-to-menu" style="width:190px;font-size:11px;padding:12px 0;">⌂ Main Menu</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Version & social ── -->
+  <div id="version-label">Game version: 1.0</div>
+  <div id="social-icons">
+    <a href="https://github.com/PK-Lambda" target="_blank" rel="noopener" title="GitHub">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 2C6.477 2 2 6.477 2 12c0 4.418 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.009-.868-.013-1.703-2.782.604-3.369-1.342-3.369-1.342-.454-1.154-1.11-1.462-1.11-1.462-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0112 6.836a9.59 9.59 0 012.504.337c1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.202 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.163 22 16.418 22 12c0-5.523-4.477-10-10-10z" fill="white"/></svg>
+    </a>
+    <a href="https://www.linkedin.com/in/peter-sobko-mba-2aa00b159/" target="_blank" rel="noopener" title="LinkedIn">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M20.447 20.452H17.21v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.985V9h3.104v1.561h.046c.434-.82 1.492-1.684 3.07-1.684 3.284 0 3.89 2.163 3.89 4.976v6.6zM5.337 7.433a1.8 1.8 0 110-3.6 1.8 1.8 0 010 3.6zM6.959 20.452H3.71V9h3.249v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" fill="white"/></svg>
+    </a>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════════════════
+// CONSTANTS & CONFIG
+// ═══════════════════════════════════════════════════════════════════════════════
+const W = 640, H = 480;
+const PLAY_H = H - 64;          // gameplay area (above cockpit)
+const BARRAGE_CD = 20000;       // 20s cooldown in ms
+const MAX_HEALTH = 5;
+const BULLET_SPEED = 2.625;
+const ROCKET_NAMES = ['The Viper','Nova Dart','Iron Fang','Ghost Wing'];
+
+// Per-rocket colour themes [body, accent, glow]
+const ROCKET_THEMES = [
+  ['#2a1f4e','#7c3aed','rgba(124,58,237,0.8)'],
+  ['#0f2a33','#0891b2','rgba(8,145,178,0.8)'],
+  ['#2d1000','#ea580c','rgba(234,88,12,0.8)'],
+  ['#1e2535','#cbd5e1','rgba(203,213,225,0.8)'],
+];
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// GLOBAL STATE
+// ═══════════════════════════════════════════════════════════════════════════════
+const gameState = { selectedRocket: null, pendingRocket: null };
+
+const gs = {
+  running: false,
+  paused:  false,
+  health:  MAX_HEALTH,
+  score:   0,
+  best:    0,
+  wave:    1,
+  angle:   -Math.PI/2,
+  mouseX:  W/2,
+  mouseY:  PLAY_H/2,
+  bullets: [],
+  enemies: [],
+  particles:[],
+  barrageCD: 0,
+  spawnTimer: 0,
+  waveEnemies: 0,
+  waveKills: 0,
+  transitioning: false,
+  gunSpeedMult: 1.0,   // increases with each speed upgrade
+  hasMachineGun: false,
+  hasShotgun: false,
+  hasBarrage: false,
+  mouseHeld: false,
+  machineGunTimer: 0,
+};
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// CANVAS
+// ═══════════════════════════════════════════════════════════════════════════════
+const canvas = document.getElementById('game-canvas');
+const ctx    = canvas.getContext('2d');
+canvas.width = W; canvas.height = H;
+
+// Barrage ring canvas
+const bCanvas = document.getElementById('barrage-canvas');
+const bCtx    = bCanvas.getContext('2d');
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// STARFIELD (shared across all screens)
+// ═══════════════════════════════════════════════════════════════════════════════
+const nebulaC = document.createElement('canvas');
+nebulaC.width=W; nebulaC.height=H;
+const nCtx=nebulaC.getContext('2d');
+[{x:.12*W,y:.28*H,r:170,c:'rgba(76,29,149,0.20)'},{x:.78*W,y:.65*H,r:150,c:'rgba(55,13,115,0.16)'},{x:.50*W,y:.12*H,r:120,c:'rgba(109,40,217,0.13)'},{x:.60*W,y:.85*H,r:100,c:'rgba(91,21,155,0.11)'}]
+.forEach(b=>{const g=nCtx.createRadialGradient(b.x,b.y,0,b.x,b.y,b.r);g.addColorStop(0,b.c);g.addColorStop(1,'transparent');nCtx.fillStyle=g;nCtx.beginPath();nCtx.arc(b.x,b.y,b.r,0,Math.PI*2);nCtx.fill();});
+
+const stars=[];
+[{count:90,speed:.12,minR:.3,maxR:.75,ba:.40},{count:55,speed:.30,minR:.6,maxR:1.2,ba:.62},{count:28,speed:.60,minR:.9,maxR:1.8,ba:.85}]
+.forEach(d=>{for(let i=0;i<d.count;i++)stars.push({x:Math.random()*W,y:Math.random()*H,r:d.minR+Math.random()*(d.maxR-d.minR),speed:d.speed*(0.75+Math.random()*0.5),alpha:d.ba*(0.55+Math.random()*0.45),to:Math.random()*Math.PI*2,ts:0.25+Math.random()*0.9});});
+
+let shooters=[];
+function spawnShooter(){shooters.push({x:Math.random()*W*.7,y:Math.random()*H*.45,vx:3.5+Math.random()*3,vy:1.0+Math.random()*1.8,life:1.0});setTimeout(spawnShooter,2800+Math.random()*3200);}
+setTimeout(spawnShooter,1200);
+
+function drawStarfield(t){
+  ctx.fillStyle='#03020b';ctx.fillRect(0,0,W,H);
+  ctx.drawImage(nebulaC,0,0);
+  ctx.globalAlpha=1;
+  stars.forEach(s=>{
+    s.y+=s.speed;if(s.y>H+2){s.y=-2;s.x=Math.random()*W;}
+    const tw=0.65+0.35*Math.sin(t*s.ts+s.to);
+    ctx.globalAlpha=s.alpha*tw;ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,Math.PI*2);ctx.fill();
+  });
+  ctx.globalAlpha=1;
+  shooters=shooters.filter(sh=>{
+    sh.x+=sh.vx;sh.y+=sh.vy;sh.life-=0.016;
+    if(sh.life<=0||sh.x>W+40)return false;
+    const mag=Math.hypot(sh.vx,sh.vy),tl=55;
+    const tx=sh.x-sh.vx/mag*tl,ty=sh.y-sh.vy/mag*tl;
+    const g=ctx.createLinearGradient(tx,ty,sh.x,sh.y);
+    g.addColorStop(0,'rgba(200,180,255,0)');g.addColorStop(1,`rgba(230,215,255,${(sh.life*.85).toFixed(2)})`);
+    ctx.strokeStyle=g;ctx.lineWidth=1.4;ctx.beginPath();ctx.moveTo(tx,ty);ctx.lineTo(sh.x,sh.y);ctx.stroke();
+    return true;
+  });
+  ctx.globalAlpha=1;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ROCKET DRAWING FUNCTIONS (canvas versions matching SVG designs)
+// ═══════════════════════════════════════════════════════════════════════════════
+function drawPlayerRocket(cx, cy, angle, rocketId){
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(angle + Math.PI/2);
+  const sc = 0.55;
+  ctx.scale(sc, sc);
+
+  const theme = ROCKET_THEMES[rocketId] || ROCKET_THEMES[0];
+  const [body, accent] = theme;
+
+  switch(rocketId){
+    case 0: // The Viper — purple
+      ctx.fillStyle=body; ctx.strokeStyle=accent; ctx.lineWidth=2;
+      ctx.beginPath(); ctx.moveTo(0,-48); ctx.lineTo(18,-12); ctx.lineTo(18,28); ctx.lineTo(-18,28); ctx.lineTo(-18,-12); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.fillStyle=accent; ctx.beginPath(); ctx.moveTo(0,-48); ctx.lineTo(-10,-12); ctx.lineTo(10,-12); ctx.closePath(); ctx.fill();
+      ctx.fillStyle=accent; ctx.globalAlpha=0.5; ctx.beginPath(); ctx.moveTo(-18,28); ctx.lineTo(-28,44); ctx.lineTo(-14,34); ctx.closePath(); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(18,28); ctx.lineTo(28,44); ctx.lineTo(14,34); ctx.closePath(); ctx.fill();
+      ctx.globalAlpha=1;
+      ctx.fillStyle='#0d0820'; ctx.strokeStyle=accent; ctx.lineWidth=1.5;
+      ctx.beginPath(); ctx.arc(0,4,8,0,Math.PI*2); ctx.fill(); ctx.stroke();
+      break;
+    case 1: // Nova Dart — cyan
+      ctx.fillStyle=body; ctx.strokeStyle=accent; ctx.lineWidth=2;
+      ctx.beginPath(); ctx.moveTo(0,-50); ctx.lineTo(12,-14); ctx.lineTo(12,30); ctx.lineTo(-12,30); ctx.lineTo(-12,-14); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.fillStyle=accent; ctx.beginPath(); ctx.moveTo(0,-50); ctx.lineTo(-12,-14); ctx.lineTo(12,-14); ctx.closePath(); ctx.fill();
+      ctx.fillStyle=accent; ctx.globalAlpha=0.5; ctx.beginPath(); ctx.moveTo(-12,24); ctx.lineTo(-26,46); ctx.lineTo(-10,32); ctx.closePath(); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(12,24); ctx.lineTo(26,46); ctx.lineTo(10,32); ctx.closePath(); ctx.fill();
+      ctx.globalAlpha=1;
+      ctx.fillStyle='#0d0820'; ctx.strokeStyle=accent; ctx.lineWidth=1.5;
+      ctx.save(); ctx.rotate(Math.PI/4); ctx.fillRect(-5,-5,10,10); ctx.strokeRect(-5,-5,10,10); ctx.restore();
+      break;
+    case 2: // Iron Fang — orange
+      ctx.fillStyle=body; ctx.strokeStyle=accent; ctx.lineWidth=2;
+      ctx.beginPath(); ctx.roundRect(-20,-14,40,44,4); ctx.fill(); ctx.stroke();
+      ctx.fillStyle='#7c2d12'; ctx.strokeStyle=accent;
+      ctx.beginPath(); ctx.ellipse(0,-14,20,22,0,0,Math.PI*2); ctx.fill(); ctx.stroke();
+      ctx.fillStyle=accent; ctx.beginPath(); ctx.moveTo(0,-48); ctx.lineTo(-12,-22); ctx.lineTo(12,-22); ctx.closePath(); ctx.fill();
+      ctx.fillStyle='#7c2d12'; ctx.strokeStyle=accent; ctx.globalAlpha=0.8;
+      ctx.beginPath(); ctx.moveTo(-20,12); ctx.lineTo(-30,44); ctx.lineTo(-16,26); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(20,12); ctx.lineTo(30,44); ctx.lineTo(16,26); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.globalAlpha=1;
+      ctx.fillStyle='#0d0820'; ctx.strokeStyle=accent; ctx.lineWidth=1.5;
+      ctx.beginPath(); ctx.ellipse(0,-4,9,7,0,0,Math.PI*2); ctx.fill(); ctx.stroke();
+      break;
+    case 3: // Ghost Wing — silver/white
+      ctx.fillStyle=body; ctx.strokeStyle=accent; ctx.lineWidth=2;
+      ctx.beginPath(); ctx.moveTo(0,-46); ctx.lineTo(8,-10); ctx.lineTo(8,30); ctx.lineTo(-8,30); ctx.lineTo(-8,-10); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.fillStyle='#cbd5e1'; ctx.beginPath(); ctx.moveTo(0,-46); ctx.lineTo(-8,-10); ctx.lineTo(8,-10); ctx.closePath(); ctx.fill();
+      ctx.fillStyle='#334155'; ctx.strokeStyle=accent; ctx.globalAlpha=0.8;
+      ctx.beginPath(); ctx.moveTo(-8,22); ctx.lineTo(-24,46); ctx.lineTo(-8,32); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(8,22); ctx.lineTo(24,46); ctx.lineTo(8,32); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.globalAlpha=1;
+      ctx.fillStyle='#0d0820'; ctx.strokeStyle=accent; ctx.lineWidth=1;
+      ctx.fillRect(-6,-1,12,5); ctx.strokeRect(-6,-1,12,5);
+      break;
+  }
+
+  // Exhaust flame
+  ctx.globalAlpha=0.7+Math.random()*0.3;
+  const fl=ctx.createRadialGradient(0,30,0,0,30,14);
+  fl.addColorStop(0,'rgba(255,200,50,0.9)');fl.addColorStop(0.5,'rgba(255,100,20,0.5)');fl.addColorStop(1,'transparent');
+  ctx.fillStyle=fl; ctx.beginPath(); ctx.ellipse(0,30+Math.random()*4,7,12+Math.random()*5,0,0,Math.PI*2); ctx.fill();
+  ctx.globalAlpha=1;
+  ctx.restore();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ENEMY DEFINITIONS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// Ship colour palettes [body, accent]
+const SHIP_PALETTES = [
+  ['#1a0a2e','#ef4444'],  // red
+  ['#0a1a2e','#38bdf8'],  // ice blue
+  ['#1a2e0a','#4ade80'],  // green
+  ['#2e1a0a','#fb923c'],  // orange
+  ['#1a0a2a','#e879f9'],  // pink
+];
+
+function spawnEnemy(wave){
+  const isShip = Math.random() < 0.25 + Math.min(wave*0.04, 0.45);
+
+  // Spawn on periphery — pick edge, then aim straight at player centre
+  const side = Math.floor(Math.random()*4);
+  let x, y;
+  if(side===0){ x=Math.random()*W;        y=-20; }
+  else if(side===1){ x=W+20;              y=Math.random()*PLAY_H; }
+  else if(side===2){ x=Math.random()*W;   y=PLAY_H+20; }
+  else            { x=-20;                y=Math.random()*PLAY_H; }
+
+  // Direction toward player centre with slight random wobble
+  const baseAngle = Math.atan2(PLAY_H/2 - y, W/2 - x);
+  const wobble    = (Math.random()-0.5) * 0.35;
+  const angle     = baseAngle + wobble;
+
+  // Speed: flat slow start until wave 6, then gentle ramp, capped at original speed
+  const baseSpd   = 0.23;
+  const rampStart = 6;
+  const maxSpd    = 0.6 + Math.min((wave - rampStart) * 0.08, 1.4);
+  const spd = wave < rampStart
+    ? baseSpd + Math.random() * 0.1
+    : Math.min(baseSpd + (wave - rampStart) * 0.08 + Math.random() * 0.2, maxSpd);
+  const vx  = Math.cos(angle) * spd;
+  const vy  = Math.sin(angle) * spd;
+
+  if(isShip){
+    const pal = SHIP_PALETTES[Math.floor(Math.random()*SHIP_PALETTES.length)];
+    return{
+      type:'ship', x, y, vx, vy,
+      hp: 1 + Math.floor(wave/4),
+      maxHp: 1 + Math.floor(wave/4),
+      r: 12,
+      angle: angle,
+      palette: pal,
+    };
+  } else {
+    const r = 8 + Math.random()*9;   // smaller: was 14-28, now 8-17
+    const pts=[];
+    const n = 6 + Math.floor(Math.random()*4);
+    for(let i=0;i<n;i++){
+      const a = i/n*Math.PI*2;
+      pts.push({a, r: r*(0.65+Math.random()*0.35)});
+    }
+    return{
+      type:'asteroid', x, y, vx, vy,
+      hp: 1,
+      maxHp: 1,
+      r, pts,
+      rot: 0,
+      rotSpd: (Math.random()-0.5)*0.04,
+      trail: [],  // comet trail positions
+    };
+  }
+}
+
+function drawEnemy(e){
+  // ── Comet trail for asteroids ──────────────────────────────────────────────
+  if(e.type==='asteroid'){
+    e.trail.forEach((pt,i)=>{
+      const frac = i/e.trail.length;
+      ctx.globalAlpha = frac * 0.45;
+      ctx.fillStyle = `hsl(30,80%,60%)`;
+      const tr = e.r * frac * 0.55;
+      ctx.beginPath(); ctx.arc(pt.x, pt.y, Math.max(tr,1), 0, Math.PI*2); ctx.fill();
+    });
+    ctx.globalAlpha=1;
+  }
+
+  ctx.save(); ctx.translate(e.x, e.y);
+
+  if(e.type==='asteroid'){
+    ctx.rotate(e.rot);
+    ctx.beginPath();
+    e.pts.forEach((p,i)=>{
+      const xx=Math.cos(p.a)*p.r, yy=Math.sin(p.a)*p.r;
+      i===0?ctx.moveTo(xx,yy):ctx.lineTo(xx,yy);
+    });
+    ctx.closePath();
+    const g=ctx.createRadialGradient(0,0,0,0,0,e.r);
+    g.addColorStop(0,'#7a6545'); g.addColorStop(1,'#3a2e1c');
+    ctx.fillStyle=g; ctx.fill();
+    ctx.strokeStyle='#b09060'; ctx.lineWidth=1; ctx.stroke();
+
+  } else {
+    // Enemy ship — points in direction of travel
+    ctx.rotate(e.angle + Math.PI/2);
+    const [body, accent] = e.palette;
+    ctx.fillStyle=body; ctx.strokeStyle=accent; ctx.lineWidth=1.2;
+    ctx.beginPath();
+    ctx.moveTo(0,-14); ctx.lineTo(9,7); ctx.lineTo(5,13);
+    ctx.lineTo(-5,13); ctx.lineTo(-9,7); ctx.closePath();
+    ctx.fill(); ctx.stroke();
+    // Nose
+    ctx.fillStyle=accent;
+    ctx.beginPath(); ctx.moveTo(0,-14); ctx.lineTo(-6,2); ctx.lineTo(6,2); ctx.closePath(); ctx.fill();
+    // Engine glow
+    ctx.fillStyle=accent; ctx.globalAlpha=0.6;
+    ctx.beginPath(); ctx.arc(0,10,3,0,Math.PI*2); ctx.fill();
+    ctx.globalAlpha=1;
+    // Fins
+    ctx.fillStyle=body; ctx.globalAlpha=0.7;
+    ctx.beginPath(); ctx.moveTo(-9,7); ctx.lineTo(-15,15); ctx.lineTo(-6,10); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(9,7);  ctx.lineTo(15,15);  ctx.lineTo(6,10);  ctx.closePath(); ctx.fill();
+    ctx.globalAlpha=1;
+  }
+  ctx.restore();
+
+  // Health bar — only show if more than 1 hp
+  if(e.maxHp>1){
+    const bw=e.r*2, bh=2, bx=e.x-e.r, by=e.y-e.r-7;
+    ctx.fillStyle='rgba(0,0,0,0.4)'; ctx.fillRect(bx,by,bw,bh);
+    ctx.fillStyle=e.type==='ship'? e.palette[1] :'#f59e0b';
+    ctx.fillRect(bx,by,bw*(e.hp/e.maxHp),bh);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// PARTICLE SYSTEM
+// ═══════════════════════════════════════════════════════════════════════════════
+function spawnParticles(x,y,color,count){
+  for(let i=0;i<count;i++){
+    const a=Math.random()*Math.PI*2, spd=1+Math.random()*4;
+    gs.particles.push({x,y,vx:Math.cos(a)*spd,vy:Math.sin(a)*spd,life:1,color});
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// WAVE MANAGEMENT
+// ═══════════════════════════════════════════════════════════════════════════════
+function enemyCountForWave(w){ return 3 + Math.floor(w * 1.5); }
+
+function startWave(w){
+  gs.wave=w;
+  gs.waveEnemies=enemyCountForWave(w);
+  gs.waveKills=0;
+  gs.enemies=[];
+  gs.bullets=[];
+  gs.spawnTimer=0;
+  gs.transitioning=false;
+  updateHUD();
+  showWaveBanner(`WAVE ${w}`, w===1?'Survive!':'Enemies increased!');
+}
+
+function showWaveBanner(title, sub){
+  const el=document.getElementById('wave-banner');
+  el.innerHTML=`${title}<br><span style="font-size:14px;letter-spacing:3px;color:#a78bfa">${sub}</span>`;
+  el.style.opacity='1';
+  setTimeout(()=>el.style.opacity='0', 2200);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// HUD UPDATES
+// ═══════════════════════════════════════════════════════════════════════════════
+function updateHUD(){
+  document.getElementById('hud-wave').textContent=gs.wave;
+  document.getElementById('hud-score').textContent=gs.score;
+  document.getElementById('hud-best').textContent=gs.best;
+  for(let i=0;i<MAX_HEALTH;i++){
+    const pip=document.getElementById(`pip-${i}`);
+    pip.className='pip '+(i<gs.health?'alive':'hit');
+  }
+}
+
+function updateBarrageHUD(dt){
+  if(gs.barrageCD>0) gs.barrageCD=Math.max(0,gs.barrageCD-dt);
+  const lbl=document.getElementById('barrage-label');
+  bCtx.clearRect(0,0,36,36);
+
+  if(!gs.hasBarrage){
+    bCtx.beginPath();bCtx.arc(18,18,15,0,Math.PI*2);
+    bCtx.strokeStyle='rgba(100,100,100,0.3)';bCtx.lineWidth=4;bCtx.stroke();
+    lbl.textContent='🔒';
+    return;
+  }
+
+  const frac=gs.barrageCD/BARRAGE_CD;
+  bCtx.beginPath();bCtx.arc(18,18,15,0,Math.PI*2);
+  bCtx.strokeStyle='rgba(124,58,237,0.2)';bCtx.lineWidth=4;bCtx.stroke();
+  if(frac>0){
+    bCtx.beginPath();bCtx.arc(18,18,15,-Math.PI/2,-Math.PI/2+Math.PI*2*(1-frac));
+    bCtx.strokeStyle='rgba(124,58,237,0.8)';bCtx.lineWidth=4;bCtx.stroke();
+    lbl.textContent=Math.ceil(gs.barrageCD/1000)+'s';
+  } else {
+    bCtx.beginPath();bCtx.arc(18,18,15,0,Math.PI*2);
+    bCtx.strokeStyle='rgba(167,139,250,0.9)';bCtx.lineWidth=4;bCtx.stroke();
+    lbl.textContent='RDY';
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SHOOTING
+// ═══════════════════════════════════════════════════════════════════════════════
+function fireSingle(){
+  const a=gs.angle;
+  const spd=BULLET_SPEED*gs.gunSpeedMult;
+  if(gs.hasShotgun){
+    [-0.18, 0, 0.18].forEach(offset=>{
+      gs.bullets.push({x:W/2+Math.cos(a)*22,y:PLAY_H/2+Math.sin(a)*22,vx:Math.cos(a+offset)*spd,vy:Math.sin(a+offset)*spd,life:1});
+    });
+  } else {
+    gs.bullets.push({x:W/2+Math.cos(a)*22,y:PLAY_H/2+Math.sin(a)*22,vx:Math.cos(a)*spd,vy:Math.sin(a)*spd,life:1});
+  }
+}
+
+function fireBarrage(){
+  if(!gs.hasBarrage||gs.barrageCD>0) return;
+  const COUNT=16;
+  const spd=BULLET_SPEED*gs.gunSpeedMult;
+  for(let i=0;i<COUNT;i++){
+    const a=i/COUNT*Math.PI*2;
+    gs.bullets.push({x:W/2,y:PLAY_H/2,vx:Math.cos(a)*spd,vy:Math.sin(a)*spd,life:1});
+  }
+  gs.barrageCD=BARRAGE_CD;
+  spawnParticles(W/2,PLAY_H/2,'rgba(167,139,250,0.8)',20);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// GAME OVER
+// ═══════════════════════════════════════════════════════════════════════════════
+function triggerGameOver(){
+  gs.running=false;
+  gs.mouseHeld=false;
+  if(gs.score>gs.best) gs.best=gs.score;
+  const ol=document.getElementById('game-overlay');
+  document.getElementById('overlay-title').textContent='GAME OVER';
+  document.getElementById('overlay-sub').textContent=`Wave ${gs.wave} reached`;
+  document.getElementById('overlay-score').textContent=`Score: ${gs.score}  |  Best: ${gs.best}`;
+  ol.classList.add('show');
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// MENU CHASE ANIMATION
+// ═══════════════════════════════════════════════════════════════════════════════
+// Path: right-to-left, Y between "About Us" button (~y=310) and version label (~y=455)
+// So Y midpoint ≈ 382. Both rockets fly left across the screen.
+
+const CHASE_Y      = 415;   // between About Us button and version label
+const CHASE_SPEED  = 1.4;   // px per frame (slow, relaxed glide)
+const CHASE_GAP    = 90;    // enemy trails this far behind the player rocket
+const CHASE_INTERVAL = 60000; // 60 seconds between runs
+
+const menuAnim = {
+  active:   false,
+  playerX:  0,
+  enemyX:   0,
+  rocketId: 0,
+  palIdx:   0,
+  playerBob: { phase: 0, speed: 0.018, amp: 5 },
+  enemyBob:  { phase: 1.8, speed: 0.024, amp: 4 }, // different phase & speed
+};
+
+function startChaseAnim(){
+  menuAnim.active   = true;
+  menuAnim.playerX  = W + 40;
+  menuAnim.enemyX   = W + 40 + CHASE_GAP;
+  menuAnim.rocketId = Math.floor(Math.random()*4);
+  menuAnim.palIdx   = Math.floor(Math.random()*SHIP_PALETTES.length);
+  menuAnim.playerBob.phase = Math.random()*Math.PI*2;
+  menuAnim.enemyBob.phase  = Math.random()*Math.PI*2 + 1.2; // never in sync
+}
+
+// Kick off first run after 3s, then every 60s
+setTimeout(startChaseAnim, 3000);
+setInterval(startChaseAnim, CHASE_INTERVAL);
+
+function drawMenuChase(dt){
+  if(!menuAnim.active) return;
+
+  const move = CHASE_SPEED * (dt / 16.67); // normalise to 60fps
+  menuAnim.playerX -= move;
+  menuAnim.enemyX  -= move;
+  menuAnim.playerBob.phase += menuAnim.playerBob.speed;
+  menuAnim.enemyBob.phase  += menuAnim.enemyBob.speed;
+
+  const pY = CHASE_Y + Math.sin(menuAnim.playerBob.phase) * menuAnim.playerBob.amp;
+  const eY = CHASE_Y + Math.sin(menuAnim.enemyBob.phase)  * menuAnim.enemyBob.amp;
+
+  drawPlayerRocket(menuAnim.playerX, pY, -Math.PI, menuAnim.rocketId);
+
+  // Draw enemy ship (use same mini ship from gameplay, flying left)
+  ctx.save();
+  ctx.translate(menuAnim.enemyX, eY);
+  ctx.rotate(-Math.PI/2); // nose pointing left
+  const [body, accent] = SHIP_PALETTES[menuAnim.palIdx];
+  ctx.fillStyle=body; ctx.strokeStyle=accent; ctx.lineWidth=1.4;
+  ctx.beginPath();
+  ctx.moveTo(0,-16); ctx.lineTo(11,8); ctx.lineTo(6,15);
+  ctx.lineTo(-6,15); ctx.lineTo(-11,8); ctx.closePath();
+  ctx.fill(); ctx.stroke();
+  ctx.fillStyle=accent;
+  ctx.beginPath(); ctx.moveTo(0,-16); ctx.lineTo(-7,2); ctx.lineTo(7,2); ctx.closePath(); ctx.fill();
+  ctx.fillStyle=accent; ctx.globalAlpha=0.65;
+  ctx.beginPath(); ctx.arc(0,11,3.5,0,Math.PI*2); ctx.fill();
+  ctx.globalAlpha=0.7;
+  ctx.fillStyle=body;
+  ctx.beginPath(); ctx.moveTo(-11,8); ctx.lineTo(-18,17); ctx.lineTo(-7,12); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo( 11,8); ctx.lineTo( 18,17); ctx.lineTo(  7,12); ctx.closePath(); ctx.fill();
+  ctx.globalAlpha=1;
+  ctx.restore();
+
+  // Deactivate once both are fully off the left edge
+  if(menuAnim.enemyX < -60) menuAnim.active = false;
+}
+let lastTs=0;
+
+function gameLoop(ts){
+  if(lastTs===0) lastTs=ts;
+  const dt=Math.min(ts-lastTs,50); lastTs=ts;
+
+  drawStarfield(ts*.001);
+
+  // Menu chase animation — only on main menu
+  const menuVisible = !document.getElementById('menu').classList.contains('hidden');
+  if(menuVisible) drawMenuChase(dt);
+
+  if(!gs.running||gs.paused){requestAnimationFrame(gameLoop);return;}
+
+  // ── Machine gun auto-fire ───────────────────────────────────────────────────
+  if(gs.hasMachineGun && gs.mouseHeld && gs.mouseY<=PLAY_H){
+    gs.machineGunTimer-=dt;
+    if(gs.machineGunTimer<=0){
+      fireSingle();
+      gs.machineGunTimer=80; // fire every 80ms
+    }
+  }
+
+  // ── Rotate player toward mouse ──────────────────────────────────────────────
+  const dx=gs.mouseX-W/2, dy=gs.mouseY-PLAY_H/2;
+  gs.angle=Math.atan2(dy,dx);
+
+  // ── Spawn enemies ───────────────────────────────────────────────────────────
+  if(!gs.transitioning){
+    const spawnInterval = Math.max(60, 180 - gs.wave*8);
+    gs.spawnTimer+=dt;
+    const totalSpawned=gs.enemies.length+gs.waveKills;
+    if(gs.spawnTimer>spawnInterval && totalSpawned<gs.waveEnemies){
+      gs.enemies.push(spawnEnemy(gs.wave));
+      gs.spawnTimer=0;
+    }
+
+    // Wave clear check
+    if(gs.waveKills>=gs.waveEnemies && gs.enemies.length===0){
+      gs.transitioning=true;
+      gs.score+=gs.wave*50;
+      updateHUD();
+      showWaveBanner('WAVE CLEAR!',`+${gs.wave*50} bonus`);
+      setTimeout(()=>{ if(gs.running) openShop(); }, 2000);
+    }
+  }
+
+  // ── Update bullets ──────────────────────────────────────────────────────────
+  gs.bullets=gs.bullets.filter(b=>{
+    b.x+=b.vx; b.y+=b.vy;
+    b.life-=0.008;
+    return b.life>0 && b.x>-10 && b.x<W+10 && b.y>-10 && b.y<PLAY_H+10;
+  });
+
+  // ── Update enemies ──────────────────────────────────────────────────────────
+  gs.enemies=gs.enemies.filter(e=>{
+    e.x+=e.vx; e.y+=e.vy;
+    if(e.type==='asteroid'){
+      e.rot+=e.rotSpd;
+      // Comet trail — store last 12 positions
+      e.trail.push({x:e.x, y:e.y});
+      if(e.trail.length>12) e.trail.shift();
+    }
+    if(e.type==='ship') e.angle=Math.atan2(e.vy,e.vx);
+
+    // Off screen removal
+    const margin=60;
+    if(e.x<-margin||e.x>W+margin||e.y<-margin||e.y>PLAY_H+margin) return false;
+
+    // Bullet collision
+    let hit=false;
+    gs.bullets=gs.bullets.filter(b=>{
+      if(hit) return true;
+      if(Math.hypot(b.x-e.x,b.y-e.y)<e.r+3){
+        e.hp--; b.life=0;
+        spawnParticles(e.x,e.y,e.type==='ship'? e.palette[1] :'rgba(180,140,80,0.8)',5);
+        if(e.hp<=0){
+          spawnParticles(e.x,e.y,e.type==='ship'? e.palette[1] :'rgba(200,160,80,0.9)',14);
+          gs.score+=e.type==='ship'?150:50;
+          gs.waveKills++;
+          updateHUD();
+          hit=true;
+        }
+        return false;
+      }
+      return true;
+    });
+    if(hit) return false;
+
+    // Player collision
+    if(Math.hypot(e.x-W/2,e.y-PLAY_H/2)<e.r+14){
+      spawnParticles(e.x,e.y,'rgba(239,68,68,0.9)',12);
+      takeDamage();
+      return false;
+    }
+
+    return true;
+  });
+
+  // ── Barrage HUD ─────────────────────────────────────────────────────────────
+  updateBarrageHUD(dt);
+
+  // ── Update particles ─────────────────────────────────────────────────────────
+  gs.particles=gs.particles.filter(p=>{
+    p.x+=p.vx; p.y+=p.vy; p.vx*=0.92; p.vy*=0.92; p.life-=0.03;
+    return p.life>0;
+  });
+
+  // ── DRAW ────────────────────────────────────────────────────────────────────
+
+  // Clip to play area
+  ctx.save();
+  ctx.beginPath();ctx.rect(0,0,W,PLAY_H);ctx.clip();
+
+  // Draw particles
+  gs.particles.forEach(p=>{
+    ctx.globalAlpha=p.life;ctx.fillStyle=p.color;
+    ctx.beginPath();ctx.arc(p.x,p.y,2+p.life*2,0,Math.PI*2);ctx.fill();
+  });
+  ctx.globalAlpha=1;
+
+  // Draw player bullets
+  gs.bullets.forEach(b=>{
+    const theme=ROCKET_THEMES[gameState.selectedRocket||0];
+    ctx.globalAlpha=b.life;
+    const g=ctx.createRadialGradient(b.x,b.y,0,b.x,b.y,5);
+    g.addColorStop(0,'#fff');g.addColorStop(1,theme[2]);
+    ctx.fillStyle=g;ctx.beginPath();ctx.arc(b.x,b.y,4,0,Math.PI*2);ctx.fill();
+    ctx.globalAlpha=1;
+  });
+
+  // Draw enemies
+  gs.enemies.forEach(drawEnemy);
+
+  // Draw player
+  drawPlayerRocket(W/2,PLAY_H/2,gs.angle,gameState.selectedRocket||0);
+
+  // Custom cursor crosshair
+  ctx.strokeStyle='rgba(255,255,255,0.5)';ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(gs.mouseX-8,gs.mouseY);ctx.lineTo(gs.mouseX+8,gs.mouseY);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(gs.mouseX,gs.mouseY-8);ctx.lineTo(gs.mouseX,gs.mouseY+8);ctx.stroke();
+  ctx.beginPath();ctx.arc(gs.mouseX,gs.mouseY,5,0,Math.PI*2);ctx.stroke();
+
+  ctx.restore();
+
+  requestAnimationFrame(gameLoop);
+}
+
+function takeDamage(){
+  gs.health=Math.max(0,gs.health-1);
+  updateHUD();
+  // Flash red inside clipped play area
+  ctx.save();
+  ctx.beginPath();ctx.rect(0,0,W,PLAY_H);ctx.clip();
+  ctx.fillStyle='rgba(239,68,68,0.25)';ctx.fillRect(0,0,W,PLAY_H);
+  ctx.restore();
+  if(gs.health<=0) triggerGameOver();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SHOP
+// ═══════════════════════════════════════════════════════════════════════════════
+function openShop(){
+  document.getElementById('shop-wave-label').textContent=`Wave ${gs.wave} cleared!`;
+  updateShopButtons();
+  document.getElementById('shop-overlay').classList.add('show');
+}
+
+function closeShop(){
+  document.getElementById('shop-overlay').classList.remove('show');
+  startWave(gs.wave+1);
+}
+
+function updateShopButtons(){
+  document.getElementById('shop-score-label').textContent=`Credits: ${gs.score}`;
+
+  const s = gs.score;
+
+  // Hull Repair — repeatable, disabled at full health
+  const healthBtn=document.getElementById('btn-buy-health');
+  healthBtn.disabled = s<1000||gs.health>=MAX_HEALTH;
+  healthBtn.textContent = gs.health>=MAX_HEALTH ? '✓ Full' : 'Buy';
+
+  // Speed Boost — repeatable
+  document.getElementById('btn-buy-speed').disabled = s<1000;
+  const pct=Math.round((gs.gunSpeedMult-1)*100);
+  document.getElementById('shop-speed-desc').textContent=`+10% bullet speed${pct>0?' (+'+(pct)+'%)':''}`;
+
+  // Machine Gun — one-time
+  const mgCard=document.getElementById('shop-card-machinegun');
+  const mgBtn=document.getElementById('btn-buy-machinegun');
+  if(gs.hasMachineGun){ mgCard.classList.add('owned'); mgBtn.textContent='✓ Owned'; mgBtn.disabled=true; }
+  else { mgCard.classList.remove('owned'); mgBtn.textContent='Buy'; mgBtn.disabled=s<1500; }
+
+  // Shotgun — one-time
+  const sgCard=document.getElementById('shop-card-shotgun');
+  const sgBtn=document.getElementById('btn-buy-shotgun');
+  if(gs.hasShotgun){ sgCard.classList.add('owned'); sgBtn.textContent='✓ Owned'; sgBtn.disabled=true; }
+  else { sgCard.classList.remove('owned'); sgBtn.textContent='Buy'; sgBtn.disabled=s<5000; }
+
+  // Barrage — one-time
+  const brCard=document.getElementById('shop-card-barrage');
+  const brBtn=document.getElementById('btn-buy-barrage');
+  if(gs.hasBarrage){ brCard.classList.add('owned'); brBtn.textContent='✓ Owned'; brBtn.disabled=true; }
+  else { brCard.classList.remove('owned'); brBtn.textContent='Buy'; brBtn.disabled=s<5000; }
+}
+
+document.getElementById('btn-buy-health').addEventListener('click',()=>{
+  if(gs.score<1000||gs.health>=MAX_HEALTH) return;
+  gs.score-=1000; gs.health=MAX_HEALTH;
+  updateHUD(); updateShopButtons();
+});
+
+document.getElementById('btn-buy-speed').addEventListener('click',()=>{
+  if(gs.score<1000) return;
+  gs.score-=1000;
+  gs.gunSpeedMult=parseFloat((gs.gunSpeedMult+0.1).toFixed(2));
+  updateHUD(); updateShopButtons();
+});
+
+document.getElementById('btn-buy-machinegun').addEventListener('click',()=>{
+  if(gs.score<1500||gs.hasMachineGun) return;
+  gs.score-=1500; gs.hasMachineGun=true;
+  updateHUD(); updateShopButtons();
+});
+
+document.getElementById('btn-buy-shotgun').addEventListener('click',()=>{
+  if(gs.score<5000||gs.hasShotgun) return;
+  gs.score-=5000; gs.hasShotgun=true;
+  updateHUD(); updateShopButtons();
+});
+
+document.getElementById('btn-buy-barrage').addEventListener('click',()=>{
+  if(gs.score<5000||gs.hasBarrage) return;
+  gs.score-=5000; gs.hasBarrage=true;
+  updateHUD(); updateShopButtons();
+});
+
+document.getElementById('btn-shop-continue').addEventListener('click', closeShop);
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// START GAME
+// ═══════════════════════════════════════════════════════════════════════════════
+function startGame(){
+  gs.running=true; gs.paused=false; gs.health=MAX_HEALTH;
+  gs.score=0; gs.bullets=[]; gs.enemies=[]; gs.particles=[];
+  gs.barrageCD=0; gs.angle=-Math.PI/2; gs.transitioning=false;
+  gs.gunSpeedMult=1.0; gs.hasMachineGun=false; gs.hasShotgun=false;
+  gs.hasBarrage=false; gs.mouseHeld=false; gs.machineGunTimer=0;
+  document.getElementById('game-overlay').classList.remove('show');
+  document.getElementById('shop-overlay').classList.remove('show');
+  document.getElementById('btn-pause').textContent='⏸ Pause';
+  updateHUD();
+  startWave(1);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SCREEN NAVIGATION
+// ═══════════════════════════════════════════════════════════════════════════════
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.add('hidden'));
+  document.getElementById(id).classList.remove('hidden');
+  if(id!=='gameplay') gs.running=false;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// INPUT
+// ═══════════════════════════════════════════════════════════════════════════════
+const gameContainer = document.getElementById('game-container');
+
+gameContainer.addEventListener('mousemove',e=>{
+  const rect=canvas.getBoundingClientRect();
+  gs.mouseX=e.clientX-rect.left;
+  gs.mouseY=e.clientY-rect.top;
+});
+
+gameContainer.addEventListener('mousedown',e=>{
+  if(!gs.running||gs.paused) return;
+  if(gs.mouseY>PLAY_H) return;
+  if(e.button!==0) return;
+  e.preventDefault();
+  gs.mouseHeld=true;
+  gs.machineGunTimer=0; // fire immediately on first press
+  if(!gs.hasMachineGun) fireSingle();
+});
+
+gameContainer.addEventListener('mouseup',e=>{
+  if(e.button===0) gs.mouseHeld=false;
+});
+
+gameContainer.addEventListener('contextmenu',e=>{
+  if(!gs.running||gs.paused) return;
+  e.preventDefault();
+  fireBarrage();
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ROCKET SELECTION
+// ═══════════════════════════════════════════════════════════════════════════════
+const cards=document.querySelectorAll('.rocket-card');
+const confirmBtn=document.getElementById('btn-confirm-rocket');
+const selectedLbl=document.getElementById('selected-label');
+
+function refreshCards(){
+  cards.forEach(card=>{
+    card.classList.toggle('selected',parseInt(card.dataset.id)===gameState.pendingRocket);
+  });
+  if(gameState.pendingRocket!==null){
+    selectedLbl.textContent=ROCKET_NAMES[gameState.pendingRocket]+' selected';
+    selectedLbl.classList.add('active');
+    confirmBtn.disabled=false; confirmBtn.style.opacity='1';
+  } else {
+    selectedLbl.textContent='No rocket selected';
+    selectedLbl.classList.remove('active');
+    confirmBtn.disabled=true; confirmBtn.style.opacity='0.4';
+  }
+}
+
+function openRocketScreen(){
+  gameState.pendingRocket=gameState.selectedRocket;
+  refreshCards(); showScreen('rockets');
+}
+
+cards.forEach(card=>card.addEventListener('click',()=>{
+  gameState.pendingRocket=parseInt(card.dataset.id); refreshCards();
+}));
+
+confirmBtn.addEventListener('click',()=>{
+  if(gameState.pendingRocket===null) return;
+  gameState.selectedRocket=gameState.pendingRocket;
+  showScreen('gameplay');
+  startGame();
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// BUTTON WIRING
+// ═══════════════════════════════════════════════════════════════════════════════
+document.getElementById('btn-start').addEventListener('click',()=>{
+  openRocketScreen();
+});
+document.getElementById('btn-rockets-back').addEventListener('click',()=>showScreen('menu'));
+document.getElementById('btn-about').addEventListener('click',()=>showScreen('about'));
+document.getElementById('btn-back').addEventListener('click',()=>showScreen('menu'));
+
+document.getElementById('btn-pause').addEventListener('click',()=>{
+  if(!gs.running) return;
+  gs.paused=!gs.paused;
+  if(gs.paused) gs.mouseHeld=false;
+  document.getElementById('btn-pause').textContent=gs.paused?'▶ Resume':'⏸ Pause';
+  document.getElementById('pause-overlay').classList.toggle('show', gs.paused);
+});
+
+document.getElementById('btn-resume').addEventListener('click',()=>{
+  gs.paused=false;
+  document.getElementById('btn-pause').textContent='⏸ Pause';
+  document.getElementById('pause-overlay').classList.remove('show');
+});
+
+document.getElementById('btn-pause-to-menu').addEventListener('click',()=>{
+  gs.running=false; gs.paused=false;
+  document.getElementById('pause-overlay').classList.remove('show');
+  showScreen('menu');
+});
+
+document.getElementById('btn-to-menu').addEventListener('click',()=>{
+  gs.running=false; gs.paused=false;
+  document.getElementById('pause-overlay').classList.remove('show');
+  showScreen('menu');
+});
+
+document.getElementById('btn-restart').addEventListener('click',()=>{
+  document.getElementById('game-overlay').classList.remove('show');
+  startGame();
+});
+
+document.getElementById('btn-overlay-menu').addEventListener('click',()=>{
+  gs.running=false;
+  document.getElementById('game-overlay').classList.remove('show');
+  showScreen('menu');
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// KICK OFF
+// ═══════════════════════════════════════════════════════════════════════════════
+requestAnimationFrame(gameLoop);
+</script>
+</body>
+</html>
